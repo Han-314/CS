@@ -9,7 +9,7 @@ import (
 	"net/rpc"
 	"time"
 
-	"uk.ac.bris.cs/gameoflife/gol"
+	//"uk.ac.bris.cs/gameoflife/gol"
 	"uk.ac.bris.cs/gameoflife/stubs"
 )
 
@@ -20,7 +20,7 @@ func mod(x, m int) int {
 	return (x + m) % m
 }
 
-func countNeighbours(p gol.Params, x, y int, world [][]byte) int {
+func countNeighbours(p stubs.Params, x, y int, world [][]byte) int {
 	neighbours := 0
 	for i := -1; i <= 1; i++ {
 		for j := -1; j <= 1; j++ {
@@ -34,7 +34,7 @@ func countNeighbours(p gol.Params, x, y int, world [][]byte) int {
 	return neighbours
 }
 
-func calculateNextState(p gol.Params, world [][]byte, turn int) [][]byte {
+func calculateNextState(p stub.Params, world [][]byte, turn int) [][]byte {
 	newWorld := make([][]byte, p.ImageHeight)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, p.ImageWidth)
