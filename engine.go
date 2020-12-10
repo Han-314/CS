@@ -9,9 +9,27 @@ import (
 	"net/rpc"
 	"time"
 
+	"uk.ac.bris.cs/gameoflife/gol"
 	//"uk.ac.bris.cs/gameoflife/gol"
-	"uk.ac.bris.cs/gameoflife/stubs"
 )
+
+type Params struct {
+	Turns       int
+	Threads     int
+	ImageWidth  int
+	ImageHeight int
+}
+
+//PGM image
+type Board struct {
+	World [][]byte
+	Turn  int
+	P     gol.Params
+}
+type BoardResponse struct {
+	NewWorld [][]byte
+	NewTurn  int
+}
 
 const alive = 0xFF
 const dead = 0x00
@@ -20,7 +38,7 @@ func mod(x, m int) int {
 	return (x + m) % m
 }
 
-func countNeighbours(p stubs.Params, x, y int, world [][]byte) int {
+func countNeighbours(p Params, x, y int, world [][]byte) int {
 	neighbours := 0
 	for i := -1; i <= 1; i++ {
 		for j := -1; j <= 1; j++ {
@@ -34,7 +52,7 @@ func countNeighbours(p stubs.Params, x, y int, world [][]byte) int {
 	return neighbours
 }
 
-func calculateNextState(p stubs.Params, world [][]byte, turn int) [][]byte {
+func calculateNextState(p Params, world [][]byte, turn int) [][]byte {
 	newWorld := make([][]byte, p.ImageHeight)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, p.ImageWidth)
@@ -64,10 +82,10 @@ func calculateNextState(p stubs.Params, world [][]byte, turn int) [][]byte {
 type Engine struct {
 }
 
-func (e *Engine) NewBoard(req stubs.Board, res *stubs.BoardResponse) (err error) {
+func (e *Engine) NewBoard(req Board, res *BoardResponse) (err error) {
 	fmt.Println("-----> Engine req:", req.P)
 
-	var reply stubs.BoardResponse
+	var reply BoardResponse
 	turn := 0
 	reply.NewWorld = req.World
 	for ; turn < req.P.Turns; turn++ {
