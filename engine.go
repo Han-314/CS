@@ -9,7 +9,7 @@ import (
 	"net/rpc"
 	"time"
 
-	"uk.ac.bris.cs/gameoflife/gol"
+	//"uk.ac.bris.cs/gameoflife/gol"
 	//"uk.ac.bris.cs/gameoflife/gol"
 )
 
@@ -24,7 +24,7 @@ type Params struct {
 type Board struct {
 	World [][]byte
 	Turn  int
-	P     gol.Params
+	P     Params
 }
 type BoardResponse struct {
 	NewWorld [][]byte
