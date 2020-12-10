@@ -34,7 +34,7 @@ func countNeighbours(p stubs.Params, x, y int, world [][]byte) int {
 	return neighbours
 }
 
-func calculateNextState(p stub.Params, world [][]byte, turn int) [][]byte {
+func calculateNextState(p stubs.Params, world [][]byte, turn int) [][]byte {
 	newWorld := make([][]byte, p.ImageHeight)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, p.ImageWidth)
