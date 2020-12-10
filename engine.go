@@ -1,127 +1,17 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
-	//"log"
+	"log"
 	"math/rand"
 	"net"
 	"net/rpc"
 	"time"
-	//"os"
+
+	"uk.ac.bris.cs/gameoflife/gol"
+	"uk.ac.bris.cs/gameoflife/stubs"
 )
-
-type Params struct {
-	Turns       int
-	Threads     int
-	ImageWidth  int
-	ImageHeight int
-}
-
-
-type Board struct {
-	//Message string
-	World [][]byte
-	P     Params
-}
-type BoardResponse struct {
-	//Message  string
-	NewWorld [][]byte
-	NewTurn  int
-}
-/*var (
-	topics  = make(map[string]chan stubs.Board)
-	topicmx sync.RWMutex
-)*/
-
-//Create a new topic as a channel.
-/*func createTopic(topic string) {
-	topicmx.Lock()
-	defer topicmx.Unlock()
-	if _, ok := topics[topic]; !ok {
-		topics[topic] = make(chan stubs.Board)
-		fmt.Println("Created channel #", topic)
-	}
-}*/
-
-//The Board is published to the topic.
-/*func publish(topic string, b stubs.Board) (err error) {
-	topicmx.RLock()
-	defer topicmx.RUnlock()
-	if ch, ok := topics[topic]; ok {
-		ch <- b
-	} else {
-		return errors.New("No such topic.")
-	}
-	return
-}*/
-
-//The subscriber loops run asynchronously, reading from the topic and sending the err
-//'job' pairs to their associated subscriber.
-/*func subscriber_loop(topic chan stubs.Board, client *rpc.Client, callback string) {
-	for {
-		nboard := <-topic
-		response := new(stubs.BoardResponse)
-		err := client.Call(callback, nboard, response)
-		if err != nil {
-			fmt.Println("Error")
-			fmt.Println(err)
-			fmt.Println("Closing subscriber thread.")
-			//Place the unfulfilled job back on the topic channel.
-			topic <- nboard
-			break
-		}
-	}
-}*/
-
-//The subscribe function registers a worker to the topic, creating an RPC client,
-//and will use the given callback string as the callback function whenever work
-//is available.
-/*func subscribe(topic string, workerAddress string, callback string) (err error) {
-	fmt.Println("Subscription request")
-	topicmx.RLock()
-	ch := topics[topic]
-	topicmx.RUnlock()
-	client, err := rpc.Dial("tcp", workerAddress)
-	if err == nil {
-		go subscriber_loop(ch, client, callback)
-	} else {
-		fmt.Println("Error subscribing ", workerAddress)
-		fmt.Println(err)
-		return err
-	}
-	return
-}*/
-
-/*func (w *Worker) NextState(req stubs.Board, res *stubs.BoardResponse) (err error) {
-	height := req.P.ImageHeight
-	width := req.P.ImageWidth
-	newWorld := make([][]byte, height)
-	for i := range newWorld {
-		newWorld[i] = make([]byte, width)
-	}
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			neighbours := countNeighbours(req.P, x, y, req.World)
-			if req.World[y][x] == alive {
-				if neighbours == 2 || neighbours == 3 {
-					newWorld[y][x] = alive
-				} else {
-					newWorld[y][x] = dead
-				}
-			} else {
-				if neighbours == 3 {
-					newWorld[y][x] = alive
-				} else {
-					newWorld[y][x] = dead
-				}
-			}
-		}
-	}
-	res.NewWorld = newWorld
-	return
-}*/
 
 const alive = 0xFF
 const dead = 0x00
@@ -130,7 +20,7 @@ func mod(x, m int) int {
 	return (x + m) % m
 }
 
-func countNeighbours(p Params, x, y int, world [][]byte) int {
+func countNeighbours(p gol.Params, x, y int, world [][]byte) int {
 	neighbours := 0
 	for i := -1; i <= 1; i++ {
 		for j := -1; j <= 1; j++ {
@@ -144,7 +34,7 @@ func countNeighbours(p Params, x, y int, world [][]byte) int {
 	return neighbours
 }
 
-func calculateNextState(p Params, world [][]byte, turn int) [][]byte {
+func calculateNextState(p gol.Params, world [][]byte, turn int) [][]byte {
 	newWorld := make([][]byte, p.ImageHeight)
 	for i := range newWorld {
 		newWorld[i] = make([]byte, p.ImageWidth)
@@ -171,59 +61,40 @@ func calculateNextState(p Params, world [][]byte, turn int) [][]byte {
 	return newWorld
 }
 
-type Engine struct{}
+type Engine struct {
+}
 
-func (e *Engine) NewBoard(req Board, res *BoardResponse) (err error) {
-	var boardRequest *Board
-	if boardRequest == nil {
-		err = errors.New("???")
-		return
-	}
+func (e *Engine) NewBoard(req stubs.Board, res *stubs.BoardResponse) (err error) {
+	fmt.Println("-----> Engine req:", req.P)
 
-	//fmt.Println("engine:" + req.Message)
-
-	newWorld := req.World
+	var reply stubs.BoardResponse
 	turn := 0
+	reply.NewWorld = req.World
 	for ; turn < req.P.Turns; turn++ {
-		newWorld = calculateNextState(req.P, newWorld, turn)
-		//req.World = calculateNextState(req.P, req.World, req.Turn)
+		reply.NewWorld = calculateNextState(req.P, req.World, turn)
+		reply.NewTurn = turn + 1
 	}
-	res.NewWorld = newWorld
-	res.NewTurn = turn
-	//*res = reply
-	//res.NewTurn = 100
+	fmt.Println("-----> Engine req.P:", req.P)
+	fmt.Println("-----> Engine Turn:", turn)
+
+	*res = reply
 	return
-	
 }
 
 func main() {
-	//var api = new(Engine)
-	rpc.Register(&Engine{})
-
-	//tcpAddr, err := net.ResolveTCPAddr("tcp", ":8033")
-	//checkError(err)
-
+	var api = new(Engine)
+	err := rpc.Register(api)
+	if err != nil {
+		log.Fatal("err API", err)
+	}
 	pAddr := flag.String("port", "8033", "Port to listen on")
 	//flag.StringVar(&nextAddr, "next", "localhost:8040", "IP:Port string for the next member")
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
-
-	/*rr := rpc.Register(api)
-	if err != nil {
-		log.Fatal("err API", err)
-	}*/
-	
+	//rpc.Register(&Engine{})
 	listener, _ := net.Listen("tcp", ":"+*pAddr)
 
 	fmt.Println("Engine Start")
 	defer listener.Close()
 	rpc.Accept(listener)
 }
-
-/*func checkError(err error) {
-    if err != nil {
-        fmt.Println("Fatal error ", err.Error())
-        os.Exit(1)
-    }
-}*/
-
